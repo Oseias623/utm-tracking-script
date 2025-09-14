@@ -1,0 +1,61 @@
+/**
+ * Script Avançado de Rastreamento UTM
+ * Desenvolvido pela Comunidade NOD
+ * 
+ * Funcionalidades:
+ * - Captura UTMs da URL atual e referrer
+ * - Preenche automaticamente campos de formulário
+ * - Fallback inteligente para utm_source
+ * - Captura slug da página de origem
+ * - Re-execução automática em mudanças de email
+ */
+
+function preencherCamposUTM(form) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlParamsReferrer = new URLSearchParams(document.referrer.split('?')[1] || '');
+    const utms = ['utm_campaign', 'utm_medium', 'utm_source', 'utm_content', 'utm_term'];
+    
+    // Primeiro, verificar e preencher apenas o utm_source
+    let utmSourceField = form.querySelector('[id^="form-field-utm_source"]');
+    if (utmSourceField) {
+        let utmSourceValue = urlParams.get('utm_source') ?? 
+                             (urlParamsReferrer.get('utm_source') ?? 
+                             (document.referrer ? new URL(document.referrer).hostname : "direto"));
+        utmSourceField.value = utmSourceValue;
+        
+        // Se utm_source for encontrado, preencher os outros UTMs
+        if (utmSourceValue !== "direto") {
+            utms.forEach(utm => {
+                if (utm !== 'utm_source') {
+                    let campo = form.querySelector('[id^="form-field-' + utm + '"]');
+                    if (campo) {
+                        campo.value = urlParams.get(utm) ?? urlParamsReferrer.get(utm) ?? '';
+                    }
+                }
+            });
+        }
+    }
+    
+    // Capturar slug da página para identificar origem
+    let campoSlug = form.querySelector('[id^="form-field-pagina_captura"]');
+    if (campoSlug) {
+        campoSlug.value = window.location.pathname.split('/')[1];
+    }
+}
+
+// Aplicar o script a todos os formulários da página
+document.querySelectorAll('form').forEach(form => {
+    preencherCamposUTM(form);
+    
+    // Re-executar quando o campo de email for alterado
+    const campoEmail = form.querySelector('[id^="form-field-email"]');
+    if (campoEmail) {
+        campoEmail.addEventListener('change', () => preencherCamposUTM(form));
+    }
+});
+
+// Log de confirmação
+console.log('%cScript de rastreamento de vendas desenvolvido pela Comunidade NOD', 'font-size:20px;color:yellow;');
+
+// Garantir execução após carregamento completo da página
+window.onload = () => document.querySelectorAll('form').forEach(preencherCamposUTM);
